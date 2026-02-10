@@ -20,3 +20,5 @@ docker rm id (all)
 
 // RETRIEVING LOG OUTPUTS ------------------------------------------------
 docker logs <container>
+
+// docker-compose up -d การหาไฟล์
