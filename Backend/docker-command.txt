@@ -22,3 +22,4 @@ docker rm id (all)
 docker logs <container>
 
 // docker-compose up -d การหาไฟล์
+// docker-compose down
