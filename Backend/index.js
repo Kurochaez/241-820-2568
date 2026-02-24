@@ -17,6 +17,7 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const mysql = require('mysql2/promise');
 const app = express();
 
 const port = 8000
@@ -26,23 +27,81 @@ app.use(bodyParser.json());
 let users = []
 let counter = 1;
 
-// path = GET /users
-app.get('/users',(req, res) => {
-    res.json(users);
+let conn = null
+const initDBConnection = async () => {
+    conn = await mysql.createConnection({
+        host: 'localhost',
+        user: 'root',
+        password: 'root',
+        database: 'webdb',
+        port: 8820
+    })    
+}
+
+// path = GET /users สำหรับ get ข้อมูล user ทั้งหมด
+app.get('/users', async (req, res) => {
+    const results = await conn.query('SELECT * FROM users');
+    res.json(results[0]);
 })
 
-// path = POST /user
-app.post('/user', (req, res) => {
-    let user = req.body;
-    user.id = counter
-    counter += 1;
-    users.push(user);
+
+// app.get('/testdb', (req, res) => {
+//     mysql.createConnection({
+//         host: 'localhost',
+//         user: 'root',
+//         password: 'root',
+//         database: 'webdb',
+//         port: 8820
+//     }).then((conn) => {
+//         conn.query('SELECT * FROM users')
+//             .then((results) => {
+//                 res.json(results[0]);
+//             }).catch((err) => {
+//                 console.error(err);
+//                 res.status(500).json({error: 'Database query errpr'});
+//             });
+//     })
+// })
+
+// กรณีที่ id ไม่มีอยู่จริง + การทำแบบลำดับขั้นตอน
+// async คือ ฟังก์ชันที่มีงานที่ต้องรอ return เป็น promise เสมอ + อนุญาตให้ใช้ await
+// await คือ การหยุดบรรทัดนั้นไว้จนกว่าจะทำงานเสร็จ
+
+// app.get('/testdb-new', async (req, res) => {
+//     try{
+//         const conn = await mysql.createConnection({
+//             host: 'localhost',
+//             user: 'root',
+//             password: 'root',
+//             database: 'webdb',
+//             port: 8820
+//         })    
+//         const [results] = await conn.query('SELECT * FROM users');
+//         res.json(results[0]);
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({error: 'Database query errpr'});
+//     }
+// })
+
+
+// path = GET /users // การดึงข้อมูลเท่านั้น
+// app.get('/users',(req, res) => {
+//     res.json(users);
+// })
+
+// path = POST /users // การส่งข้อมูล บาง post สามารถดึงข้อมูลได้เหมือน get
+app.post('/users', async (req, res) => {
+   let user = req.body;
+   const results = await conn.query('INSERT INTO users SET ?', user);
+   console.log('results:', results);
     res.json({
-        message: 'User added successfully',
-        user: user });
+        massage: 'User created successfuly',
+        data: results[0]
+   });
 })
 
-// path = PUT /user/:id
+// path = PUT /user/:id // สำหรับการแก้ไขข้อมูล
 app.put('/user/:id', (req, res) => {
     let id = req.params.id;
     // user จาก id ที่ส่งมา
@@ -68,7 +127,7 @@ app.put('/user/:id', (req, res) => {
     });
 })
 
-// path = DELETE /user/:id
+// path = DELETE /user/:id // สำหรับการลบข้อมูล
 app.delete('/user/:id', (req, res) => {
     let id = req.params.id;
 // หา index ของ user ที่ต้องการลบจาก id ที่ส่งมา
@@ -82,6 +141,7 @@ app.delete('/user/:id', (req, res) => {
     });
 })
 
-app.listen(port, () => {
+app.listen(port, async () => {
+    await initDBConnection();
     console.log(`Server is running on port ${port}`)
 });
